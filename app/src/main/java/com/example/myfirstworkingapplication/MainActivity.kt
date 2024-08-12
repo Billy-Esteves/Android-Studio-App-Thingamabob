@@ -79,9 +79,16 @@ fun TodoList() {
                             .fillMaxWidth()
                             .padding(vertical = 16.dp)
                     )
-                    Checkbox (
+                    Checkbox(
+                        // When the checkbox is toggled, a new Note instance is created using the
+                        // copy function with the updated checked value.
+                        // Then, the list is updated with a new list where the modified Note
+                        // replaces the old one.
                         onCheckedChange = {
-                            currentNote.checked = !currentNote.checked
+                            val updatedNote = currentNote.copy(checked = !currentNote.checked)
+                            notes = notes.map { note ->
+                                if (note == currentNote) updatedNote else note
+                            }
                         },
                         checked = currentNote.checked
                     )
