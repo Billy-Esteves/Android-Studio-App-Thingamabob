@@ -59,6 +59,8 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.room.common)
+    implementation(libs.androidx.room.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -68,7 +70,28 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
 
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation(libs.androidx.navigation.compose)
 
     implementation(libs.androidx.constraintlayout.compose)
+
+    // | Stuff for simple data storage |
+
+    //Preferences DataStore
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.gson)
+
+    // Coroutines
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.android)
+
+    // Coroutine Lifecycle Scopes
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx.v220)
+
+    // DataStore (Preferences) dependency
+    implementation(libs.androidx.datastore.preferences.v100)
+
+    // Coroutine support for DataStore
+    implementation(libs.kotlinx.coroutines.core.v152)
+    implementation(libs.kotlinx.coroutines.android.v152)
 }

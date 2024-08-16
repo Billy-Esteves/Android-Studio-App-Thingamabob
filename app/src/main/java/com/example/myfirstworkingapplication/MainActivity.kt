@@ -1,6 +1,7 @@
 package com.example.myfirstworkingapplication
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -30,9 +31,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStore
 import com.example.myfirstworkingapplication.ui.theme.MyFirstWorkingApplicationTheme
 
 class MainActivity : ComponentActivity() {
+
+    // Create dataStore
+    val Context.dataStore by preferencesDataStore(name = "todo_list")
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
