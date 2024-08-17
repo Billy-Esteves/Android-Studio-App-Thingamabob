@@ -29,14 +29,11 @@ class DataStoreManager(val context : Context) {
             it[STORED_CHECKED_STATUS] = note.checked
         }
     }
-    //TODO: how fix :(
+
     fun getFromDataStore() = context.preferenceDataStore.data.map {
-        val noteText = "" // Retrieve the first string in the set
-        val checkedStatus = false
-
         Note(
-            text = toString(it[STORED_STRING])
-
+            text = it[STORED_STRING].toString(),
+            checked = it[STORED_CHECKED_STATUS] == true
         )
     }
 

@@ -25,10 +25,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
@@ -46,7 +48,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyFirstWorkingApplicationTheme {
-                TodoList()
+                val dataStoreContext = LocalContext.current
+                val dataStoreManager = DataStoreManager(dataStoreContext)
+
+                TodoList(
+                    this@MainActivity,preferenceDataStore,dataStoreManager
+                )
             }
         }
     }
@@ -54,7 +61,11 @@ class MainActivity : ComponentActivity() {
 
 @SuppressLint("MutableCollectionMutableState")
 @Composable
-fun TodoList() {
+fun TodoList(
+    dataStoreManager: Any,
+    preferenceDataStore: DataStore<Preferences>,
+    dataStoreManager1: DataStoreManager
+) {
     val paddedScreenHeight: Int = LocalConfiguration.current.screenHeightDp - 16
     var allUnchecked = true
     var text by remember {
@@ -64,6 +75,11 @@ fun TodoList() {
     var notes by remember {
         mutableStateOf(listOf<Note>())
     }
+
+    val scope = rememberCoroutineScope()
+
+
+
 
     Box(
         modifier = Modifier
@@ -156,7 +172,7 @@ fun TodoList() {
     }
 }
 
-
+/*
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
@@ -165,8 +181,12 @@ fun GreetingPreview() {
             Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
+            val dataStoreContext = LocalContext.current
+            val dataStoreManager = DataStoreManager(dataStoreContext)
 
-            TodoList()
+            TodoList(
+                this@MainActivity,preferenceDataStore,dataStoreManager
+            )
         }
     }
-}
+}*/
