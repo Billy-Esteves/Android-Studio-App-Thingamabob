@@ -54,6 +54,7 @@ class MainActivity : ComponentActivity() {
                 TodoList(
                     this@MainActivity,preferenceDataStore,dataStoreManager
                 )
+
             }
         }
     }
