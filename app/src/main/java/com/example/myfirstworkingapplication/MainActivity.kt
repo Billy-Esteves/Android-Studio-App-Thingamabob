@@ -22,6 +22,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +38,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.myfirstworkingapplication.ui.theme.MyFirstWorkingApplicationTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -48,13 +50,14 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyFirstWorkingApplicationTheme {
+
+                // Use LocalContext to get the context
                 val dataStoreContext = LocalContext.current
+
+                // Create an instance of DataStoreManager
                 val dataStoreManager = DataStoreManager(dataStoreContext)
 
-                TodoList(
-                    this@MainActivity,preferenceDataStore,dataStoreManager
-                )
-
+                TodoList(dataStoreManager)
             }
         }
     }
@@ -62,25 +65,23 @@ class MainActivity : ComponentActivity() {
 
 @SuppressLint("MutableCollectionMutableState")
 @Composable
-fun TodoList(
-    dataStoreManager: Any,
-    preferenceDataStore: DataStore<Preferences>,
-    dataStoreManager1: DataStoreManager
-) {
-    val paddedScreenHeight: Int = LocalConfiguration.current.screenHeightDp - 16
-    var allUnchecked = true
-    var text by remember {
-        mutableStateOf("")
-    }
+fun TodoList(dataStoreManager: DataStoreManager) {
 
-    var notes by remember {
-        mutableStateOf(listOf<Note>())
-    }
-
+    // Coroutine scope to handle async operations
     val scope = rememberCoroutineScope()
 
+    // State to manage the text input field
+    var text by remember { mutableStateOf("") }
+    var notes by remember { mutableStateOf(listOf<Note>()) }
 
-
+    // Load the notes when the composable is first composed
+    LaunchedEffect(Unit) {
+        scope.launch {
+            dataStoreManager.getFromDataStore().collect { loadedNotes ->
+                notes = loadedNotes
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -114,6 +115,9 @@ fun TodoList(
                             notes = notes.map { note ->
                                 if (note == currentNote) updatedNote else note
                             }
+                            scope.launch {
+                                dataStoreManager.saveTodDataStore(notes) // Save the updated list
+                            }
                         },
                         checked = currentNote.checked
                     )
@@ -142,29 +146,19 @@ fun TodoList(
                     var newNote = Note(text, false)
                     notes = notes + newNote
                     text = ""
+                    scope.launch {
+                        dataStoreManager.saveTodDataStore(notes) // Save the updated list
+                    }
                 }
             }) {
                 Text(text = "add")
             }
             Button(onClick = {
-                // Check if all checkboxes are unchecked
-                allUnchecked = true
-                for (note in notes) {
-                    if (note.checked) {
-                        allUnchecked = false
-                        break
-                    }
-                }
-
-                if (allUnchecked) {
-                    // Optional: Show a message or take some action when no checkboxes are checked
-                    println("No items are selected for removal.")
-                } else {
-                    // Proceed with removal
-                    val newNotes = notes.filter { currentNote ->
-                        !currentNote.checked
-                    }
-                    notes = newNotes
+                // Proceed with removal
+                val newNotes = notes.filter { !it.checked }
+                notes = newNotes
+                scope.launch {
+                    dataStoreManager.saveTodDataStore(notes) // Save the updated list
                 }
             }) {
                 Text(text = "remove")
