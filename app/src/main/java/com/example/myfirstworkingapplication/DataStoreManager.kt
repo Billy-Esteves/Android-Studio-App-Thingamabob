@@ -5,11 +5,13 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 
@@ -25,9 +27,40 @@ class DataStoreManager(val context : Context) {
     // Gson instance for serializing and deserializing the list of notes
     private val gson = Gson()
 
+    // Variables to hold fontSize and theme background color
+    private val FONT_SIZE = intPreferencesKey("settings_fontSize")
+    private val THEME_COLOR = stringPreferencesKey("settings_color")
+
+
     // Companion object to hold the keys for storing data in DataStore
     companion object{
         val STORED_NOTES = stringPreferencesKey("notes")
+    }
+
+    // Retrieve font size directly
+    suspend fun getFontSize(): Int {
+        val preferences = context.preferenceDataStore.data.first()
+        return preferences[FONT_SIZE] ?: 4 // Default font size
+    }
+
+    // Retrieve theme color directly (without Flow)
+    suspend fun getThemeColor(): String {
+        val preferences = context.preferenceDataStore.data.first()  // Use first() to get data synchronously
+        return preferences[THEME_COLOR] ?: "#808080"  // Default color is white if not found
+    }
+
+    // Save the font size to DataStore
+    suspend fun saveFontSize(fontSize: Int) {
+        context.preferenceDataStore.edit { preferences ->
+            preferences[FONT_SIZE] = fontSize
+        }
+    }
+
+    // Save the theme color to DataStore
+    suspend fun saveThemeColor(color: String) {
+        context.preferenceDataStore.edit { preferences ->
+            preferences[THEME_COLOR] = color
+        }
     }
 
     /**

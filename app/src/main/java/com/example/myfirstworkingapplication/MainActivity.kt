@@ -22,19 +22,19 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,17 +42,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
+import androidx.core.graphics.toColorInt
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.myfirstworkingapplication.ui.theme.MyFirstWorkingApplicationTheme
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -83,6 +80,19 @@ fun NavigationBar(
     modifier: Modifier = Modifier,
     dataStoreManager: DataStoreManager
 ) {
+    val mainScope = rememberCoroutineScope()
+
+    val settingsFontSize = remember { mutableStateOf(16) }
+    var settings_color by remember { mutableStateOf(Color.Gray) }
+
+
+    LaunchedEffect(Unit) {
+        settingsFontSize.value = dataStoreManager.getFontSize()
+        settings_color = Color(android.graphics.Color.parseColor(
+            dataStoreManager.getThemeColor()
+        )) // Convert hex string to Color
+    }
+
     // Remember the drawer state (open/closed) for the navigation drawer
     val drawerState = rememberDrawerState(
         initialValue = DrawerValue.Closed
@@ -100,12 +110,14 @@ fun NavigationBar(
         drawerContent = {
             // The content inside the navigation drawer (items like "To Do List" and "Inspirational Quote")
             ModalDrawerSheet {
-                DrawerContent(onSelectScreen = { screen ->
+                DrawerContent(
+                    onSelectScreen = { screen ->
                     selectedScreen = screen  // Update the screen based on user selection
-                    scope.launch {
-                        drawerState.close()  // Close the drawer after selecting an item
-                    }
-                })
+                    scope.launch { drawerState.close() }  // Close the drawer after selecting an item
+                },
+                settingsFontSize,
+                settings_color
+                )
             }
         }
     ) {
@@ -119,6 +131,13 @@ fun NavigationBar(
                                 if (isClosed) open() else close()  // Toggle the drawer state
                             }
                         }
+                    },
+                    settingsFontSize,
+                    settings_color,
+                    dataStoreManager,
+                    modifier,
+                    onSettingsClick = {
+                        selectedScreen = "Settings"  // Navigate to Settings when settings is clicked
                     }
                 )
             }
@@ -127,11 +146,16 @@ fun NavigationBar(
             Box(modifier = Modifier.padding(paddingValues)) {
                 when (selectedScreen) {
                     "To Do List" -> {
-                        TodoList(dataStoreManager = dataStoreManager)  // Show the To-Do list screen
+                        TodoList(
+                            dataStoreManager = dataStoreManager,
+                            mainScope,
+                            settingsFontSize
+                        )  // Show the To-Do list screen
                     }
                     "Inspirational Quote" -> {
                         InspirationalQuote()  // Show the Inspirational Quote screen
                     }
+                    "Settings" -> settingsHandler(dataStoreManager, settingsFontSize, settings_color, modifier)
                     else -> {
                         Text("Select a screen from the drawer")  // Default text when no screen is selected
                     }
@@ -144,12 +168,14 @@ fun NavigationBar(
 @Composable
 fun DrawerContent(
     onSelectScreen: (String) -> Unit,  // Lambda function to notify when a drawer item is selected
+    fontSize: MutableState<Int>,
+    themeColor: Color,
     modifier: Modifier = Modifier
 ) {
     // Static header for the drawer
     Text(
         text = "Tools",
-        fontSize = 22.sp,
+        fontSize = (fontSize.value * 5).sp,
         modifier = Modifier
             .padding(start = 16.dp, top = 4.dp, bottom = 8.dp)
     )
@@ -157,7 +183,7 @@ fun DrawerContent(
     // Divider line in the drawer
     HorizontalDivider(
         thickness = 4.dp,
-        color = Color.Blue
+        color = themeColor
     )
 
     // Navigation item for "To Do List"
@@ -168,13 +194,13 @@ fun DrawerContent(
                 contentDescription = null,
                 modifier = Modifier
                     .padding(start = 32.dp)
-                    .size(26.dp)
+                    .size((fontSize.value * 6.5).dp)
             )
         },
         label = {
             Text(
                 text = "To Do List",
-                fontSize = 20.sp,
+                fontSize = (fontSize.value * 5).sp,
                 modifier = Modifier
                     .padding(start = 4.dp)
             )
@@ -193,13 +219,13 @@ fun DrawerContent(
                 contentDescription = null,
                 modifier = Modifier
                     .padding(start = 32.dp)
-                    .size(26.dp)
+                    .size((fontSize.value * 6.5).dp)
             )
         },
         label = {
             Text(
                 text = "Inspirational Quote",
-                fontSize = 20.sp,
+                fontSize = (fontSize.value * 5).sp,
                 modifier = Modifier
                     .padding(start = 4.dp)
             )
@@ -214,11 +240,18 @@ fun DrawerContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopBar(
-    onOpenDrawer: () -> Unit  // Lambda to open the drawer when the menu icon is clicked
-) {
+    onOpenDrawer: () -> Unit,  // Lambda to open the drawer when the menu icon is clicked
+    fontSize: MutableState<Int>,
+    themeColor: Color,
+    dataStoreManager: DataStoreManager,
+    modifier: Modifier,
+    onSettingsClick: () -> Unit // Pass navigation callback here
+    ) {
+    var showSettings by remember { mutableStateOf(false) } // Flag to toggle settings visibility
+
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.Blue.copy(0.4f)  // Set the background color for the app bar
+            containerColor = themeColor.copy(0.4f)  // Set the background color for the app bar
         ),
         navigationIcon = {
             // Icon to open the drawer
@@ -234,7 +267,10 @@ fun TopBar(
             )
         },
         title = {
-            Text(text = "Menu")  // Title in the app bar
+            Text(
+                text = "Menu",
+                fontSize = (fontSize.value * 5).sp
+                )  // Title in the app bar
         },
         actions = {
             // Icon for settings (currently without functionality)
@@ -245,18 +281,31 @@ fun TopBar(
                     .padding(start = 16.dp, end = 16.dp)
                     .size(30.dp)
                     .clickable {
-                        // Placeholder for settings action
+                        onSettingsClick() // Trigger navigation to settings screen
                     }
             )
         }
     )
+
+    // Show settings UI if showSettings is true
+    if (showSettings) {
+        settingsHandler(
+            dataStoreManager,
+            fontSize,
+            themeColor,
+            modifier
+        )
+    }
 }
 
 @SuppressLint("MutableCollectionMutableState")
 @Composable
-fun TodoList(dataStoreManager: DataStoreManager) {
+fun TodoList(
+    dataStoreManager: DataStoreManager,
+    scope: CoroutineScope,
+    fontSize: MutableState<Int>
+    ) {
     // Coroutine scope for handling asynchronous tasks like loading/saving notes
-    val scope = rememberCoroutineScope()
 
     // State variables for input text and notes list
     var text by remember { mutableStateOf("") }
@@ -290,6 +339,7 @@ fun TodoList(dataStoreManager: DataStoreManager) {
                 ) {
                     Text(
                         text = currentNote.text,
+                        fontSize = (fontSize.value * 4.5).sp,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 16.dp)
@@ -361,4 +411,64 @@ fun TodoList(dataStoreManager: DataStoreManager) {
 @Composable
 fun InspirationalQuote() {
 
+}
+
+@Composable
+fun settingsHandler(
+    dataStoreManager: DataStoreManager,
+    setting_fontSize: MutableState<Int>,
+    setting_themeColor: Color,
+    modifier: Modifier
+    ){
+
+    // Use a mutable state for the font size
+    var temporaryFontSize: Int
+    temporaryFontSize = setting_fontSize.value
+
+    // Launch a coroutine scope to perform the DataStore operations asynchronously
+    val scope = rememberCoroutineScope()
+
+    Column(modifier = modifier.padding(16.dp)) {
+        Text(
+            text = "Settings",
+            fontSize = (setting_fontSize.value * 7).sp,
+            color = setting_themeColor,
+            modifier = Modifier
+                .padding(start = 8.dp, bottom = 12.dp)
+        )
+        // Add other settings UI here, such as sliders, text fields, or options.
+
+        Row(modifier = Modifier.padding(start = 16.dp))
+        {
+            Column {
+                Text(
+                    text = "Font Size: $temporaryFontSize",
+                    fontSize = (setting_fontSize.value * 5).sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Slider(
+                    value = setting_fontSize.value.toFloat(),
+                    onValueChange = {
+                        setting_fontSize.value = it.toInt()
+                        scope.launch {
+                            dataStoreManager.saveFontSize(setting_fontSize.value)
+                        }
+                    },
+                    valueRange = 2f..6f, // Set a range for font size
+                    steps = 4,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+
+        Row(modifier = Modifier.padding(start = 16.dp))
+        {
+            Text(
+                text = "Theme Color: ",
+                fontSize = (setting_fontSize.value * 5).sp,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+    }
 }
